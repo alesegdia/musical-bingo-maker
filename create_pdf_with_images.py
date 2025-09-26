@@ -5,6 +5,9 @@ from reportlab.lib.utils import ImageReader
 import io
 import os
 
+# Boolean variable to control colored lines and page text
+SHOW_LINES_AND_PAGE_TEXT = False
+
 def create_image_with_text(template_path, cell_texts_list, font_path="JandaManateeSolid.ttf"):
     """
     Create an image with custom text in the grid cells
@@ -45,8 +48,9 @@ def create_image_with_text(template_path, cell_texts_list, font_path="JandaManat
         x0 = col * cell_width
         y0 = row * cell_height
         
-        # Draw the cell bounding box with thick green lines
-        draw.rectangle([x0, y0, x0 + cell_width, y0 + cell_height], outline=(0, 255, 0), width=10)
+        # Draw the cell bounding box with thick green lines (only if enabled)
+        if SHOW_LINES_AND_PAGE_TEXT:
+            draw.rectangle([x0, y0, x0 + cell_width, y0 + cell_height], outline=(0, 255, 0), width=10)
         
         # Blue inner rectangle parameters
         blue_x_offset = 45
@@ -58,7 +62,10 @@ def create_image_with_text(template_path, cell_texts_list, font_path="JandaManat
         inner_y0 = y0 + blue_y_offset
         inner_x1 = inner_x0 + blue_width
         inner_y1 = inner_y0 + blue_height
-        draw.rectangle([inner_x0, inner_y0, inner_x1, inner_y1], outline=(0, 0, 255), width=6)
+        
+        # Draw blue rectangle outline (only if enabled)
+        if SHOW_LINES_AND_PAGE_TEXT:
+            draw.rectangle([inner_x0, inner_y0, inner_x1, inner_y1], outline=(0, 0, 255), width=6)
         
         # Inner grid parameters
         inner_cols = 3
@@ -66,15 +73,17 @@ def create_image_with_text(template_path, cell_texts_list, font_path="JandaManat
         inner_cell_width = (inner_x1 - inner_x0) // inner_cols
         inner_cell_height = (inner_y1 - inner_y0) // inner_rows
         
-        # Draw vertical red lines
-        for i in range(1, inner_cols):
-            x = inner_x0 + i * inner_cell_width
-            draw.line([(x, inner_y0), (x, inner_y1)], fill=(255, 0, 0), width=6)
+        # Draw vertical red lines (only if enabled)
+        if SHOW_LINES_AND_PAGE_TEXT:
+            for i in range(1, inner_cols):
+                x = inner_x0 + i * inner_cell_width
+                draw.line([(x, inner_y0), (x, inner_y1)], fill=(255, 0, 0), width=6)
         
-        # Draw horizontal red lines
-        for j in range(1, inner_rows):
-            y = inner_y0 + j * inner_cell_height
-            draw.line([(inner_x0, y), (inner_x1, y)], fill=(255, 0, 0), width=6)
+        # Draw horizontal red lines (only if enabled)
+        if SHOW_LINES_AND_PAGE_TEXT:
+            for j in range(1, inner_rows):
+                y = inner_y0 + j * inner_cell_height
+                draw.line([(inner_x0, y), (inner_x1, y)], fill=(255, 0, 0), width=6)
         
         # Add text to each inner cell
         if main_cell_idx < len(cell_texts_list):
@@ -234,11 +243,12 @@ def create_pdf_with_images(template_path, text_variations, output_pdf_path, page
         # Add the image to the PDF
         c.drawImage(ImageReader(img_buffer), x, y, width=scaled_width, height=scaled_height)
         
-        # Add page title in bottom right corner to avoid interfering with the image
-        c.setFont("Helvetica-Bold", 12)
-        title_text = f"Page {i + 1}"
-        title_width = c.stringWidth(title_text, "Helvetica-Bold", 12)
-        c.drawString(page_width - title_width - 10, 10, title_text)
+        # Add page title in bottom right corner (only if enabled)
+        if SHOW_LINES_AND_PAGE_TEXT:
+            c.setFont("Helvetica-Bold", 12)
+            title_text = f"Page {i + 1}"
+            title_width = c.stringWidth(title_text, "Helvetica-Bold", 12)
+            c.drawString(page_width - title_width - 10, 10, title_text)
         
         # Start a new page (except for the last image)
         if i < len(text_variations) - 1:
@@ -292,107 +302,42 @@ if __name__ == "__main__":
         "La bicicleta",
         "Robarte un beso",
         "Qué bonito",
-        "Como yo te amo",
-        "Pájaros de barro",
-        "La flaca",
-        "Lobo hombre en París",
-        "Chiquilla",
-        "La Cucaracha",
-        "La Mayonesa",
-        "El anillo",
-        "Despacito",
-        "Gasolina",
-        "Danza Kuduro",
-        "Bailando",
-        "Súbeme la radio",
-        "Felices los 4",
-        "Hawái",
-        "Paquito el Chocolatero",
-        "Que viva España",
-        "Eva María",
-        "Un rayo de sol",
-        "La chica yeyé",
-        "Sarandonga",
-        "El tractor amarillo",
-        "Libre",
-        "Corazón partío",
-        "Colgando en tus manos",
-        "El tiburón",
-        "Carnaval, carnaval",
-        "La barbacoa",
-        "Cuentan las lenguas antiguas",
-        "Macarena",
-        "Aserejé",
-        "Waka Waka",
-        "Hips don’t lie",
-        "Oma yo viazé un corrá",
-        "Livin’ la vida loca",
-        "Ese toro enamorao de la luna",
-        "En qué estrella estará",
-        "Yo perreo sola",
-        "La gasolina",
-        "Tengo el corazón contento",
-        "Cuando zarpa el amor",
-        "Sueño contigo, que más dado",
-        "La bicicleta",
-        "Robarte un beso",
-        "Qué bonito",
-        "Como yo te amo",
-        "Pájaros de barro",
-        "La flaca",
-        "Lobo hombre en París",
-        "Chiquilla",
-        "La Cucaracha",
-        "La Mayonesa",
-        "El anillo",
-        "Despacito",
-        "Gasolina",
-        "Danza Kuduro",
-        "Bailando",
-        "Súbeme la radio",
-        "Felices los 4",
-        "Hawái",
-        "Paquito el Chocolatero",
-        "Que viva España",
-        "Eva María",
-        "Un rayo de sol",
-        "La chica yeyé",
-        "Sarandonga",
-        "El tractor amarillo",
-        "Libre",
-        "Corazón partío",
-        "Colgando en tus manos",
-        "El tiburón",
-        "Carnaval, carnaval",
-        "La barbacoa",
-        "Cuentan las lenguas antiguas",
-        "Macarena",
-        "Aserejé",
-        "Waka Waka",
-        "Hips don’t lie",
-        "Oma yo viazé un corrá",
-        "Livin’ la vida loca",
-        "Ese toro enamorao de la luna",
-        "En qué estrella estará",
-        "Yo perreo sola",
-        "La gasolina",
-        "Tengo el corazón contento",
-        "Cuando zarpa el amor",
-        "Sueño contigo, que más dado",
-        "La bicicleta",
-        "Robarte un beso",
-        "Qué bonito",
-        "Como yo te amo",
-        "Pájaros de barro",
-        "La flaca",
-        "Lobo hombre en París",
-        "Chiquilla",
+        "Se me enamora el alma",
+        "María",
+        "Color esperanza",
+        "Ave María",
+        "Bulería",
+        "Me gustas mucho tú",
+        "Rayando el sol",
+        "Clavado en un bar",
+        "La camisa negra",
+        "A Dios le pido",
+        "Son mis amigos",
+        "Quiero tener tu presencia",
+        "Torero (Ska-P)",
+        "Sueña la margarita",
+        "Eres tú",
+        "Resistiré",
+        "Mi gran noche",
+        "Soy rebelde",
+        "Un beso y una flor",
+        "Amigos para siempre",
+        "Como una ola",
+        "A tu vera",
+        "Ay mi Huelva",
+        "Sevilla tiene un color especial",
+        "Yo soy tu gatita",
+        "Mamma Mia",
+        "Grease",
+        "Barbie Girl",
+        "La quiero más que ojú",
+        "Bésame mucho"
     ]
 
     canciones_ganadoras = [
         "Baby shark",
         "Tengo que impedir esa boda",
-        "BSO El padrino",
+        "El padrino",
         "Ay mama!",
         "El taxi",
         "La de tu hermana"
