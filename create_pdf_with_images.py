@@ -5,7 +5,7 @@ from reportlab.lib.utils import ImageReader
 import io
 import os
 
-def create_image_with_text(template_path, cell_texts_list, font_path="arial.ttf"):
+def create_image_with_text(template_path, cell_texts_list, font_path="JandaManateeSolid.ttf"):
     """
     Create an image with custom text in the grid cells
     
@@ -92,44 +92,97 @@ def create_image_with_text(template_path, cell_texts_list, font_path="arial.ttf"
             inner_cell_x1 = inner_cell_x0 + inner_cell_width
             inner_cell_y1 = inner_cell_y0 + inner_cell_height
             
-            # Find the largest font size that fits - with safety limits
+            # Function to wrap text to fit in cell width
+            def wrap_text(text, font, max_width):
+                words = text.split()
+                lines = []
+                current_line = ""
+                
+                for word in words:
+                    test_line = current_line + (" " if current_line else "") + word
+                    bbox = font.getbbox(test_line)
+                    test_width = bbox[2] - bbox[0]
+                    
+                    if test_width <= max_width:
+                        current_line = test_line
+                    else:
+                        if current_line:
+                            lines.append(current_line)
+                            current_line = word
+                        else:
+                            # Single word is too long, add it anyway
+                            lines.append(word)
+                
+                if current_line:
+                    lines.append(current_line)
+                
+                return lines
+            
+            # Find the largest font size that fits with text wrapping
             max_font_size = 10
-            max_possible_size = min(inner_cell_width, inner_cell_height) // 3  # More conservative limit
-            max_possible_size = min(max_possible_size, 40)  # Hard limit at 40px
+            max_possible_size = min(inner_cell_width, inner_cell_height) // 4  # More conservative for multiline
+            max_possible_size = min(max_possible_size, 35)  # Hard limit at 35px for better fit
+            
+            best_font = None
+            best_lines = []
             
             # Start with a reasonable size and work our way up
-            for size in range(10, max_possible_size + 1, 1):
+            for size in range(8, max_possible_size + 1, 1):
                 try:
                     test_font = ImageFont.truetype(font_path, size)
                 except:
                     test_font = ImageFont.load_default()
                 
                 try:
-                    bbox = test_font.getbbox(inner_text)
-                    text_width = bbox[2] - bbox[0]
-                    text_height = bbox[3] - bbox[1]
+                    # Try wrapping text with this font size
+                    wrapped_lines = wrap_text(inner_text, test_font, inner_cell_width * 0.9)
                     
-                    if text_width < inner_cell_width * 0.9 and text_height < inner_cell_height * 0.9:
-                        max_font_size = size
+                    # Calculate total text height
+                    if wrapped_lines:
+                        line_bbox = test_font.getbbox("Ay")  # Use a sample for line height
+                        line_height = line_bbox[3] - line_bbox[1]
+                        total_text_height = len(wrapped_lines) * line_height + (len(wrapped_lines) - 1) * (line_height * 0.2)  # Add some line spacing
+                        
+                        # Check if all lines fit vertically
+                        if total_text_height <= inner_cell_height * 0.9:
+                            max_font_size = size
+                            best_font = test_font
+                            best_lines = wrapped_lines
+                        else:
+                            break
                     else:
                         break
                 except:
-                    # If getbbox fails, stick with current size
+                    # If wrapping fails, stick with current size
                     break
             
-            # Draw the text with proper font fallback
-            try:
-                final_font = ImageFont.truetype(font_path, max_font_size)
-            except:
-                final_font = ImageFont.load_default()
-            bbox = final_font.getbbox(inner_text)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
+            # Draw the wrapped text with proper font fallback
+            if not best_font:
+                try:
+                    best_font = ImageFont.truetype(font_path, max_font_size)
+                except:
+                    best_font = ImageFont.load_default()
+                best_lines = wrap_text(inner_text, best_font, inner_cell_width * 0.9)
             
-            text_x = inner_cell_x0 + (inner_cell_width - text_width) // 2
-            text_y = inner_cell_y0 + (inner_cell_height - text_height) // 2
-            
-            draw.text((text_x, text_y), inner_text, font=final_font, fill=(255, 255, 255))
+            # Draw each line of text
+            if best_lines:
+                line_bbox = best_font.getbbox("Ay")  # Use sample for consistent line height
+                line_height = line_bbox[3] - line_bbox[1]
+                line_spacing = line_height * 0.2
+                total_text_height = len(best_lines) * line_height + (len(best_lines) - 1) * line_spacing
+                
+                # Start from the top of the centered text block
+                start_y = inner_cell_y0 + (inner_cell_height - total_text_height) // 2
+                
+                for line_idx, line in enumerate(best_lines):
+                    line_bbox = best_font.getbbox(line)
+                    line_width = line_bbox[2] - line_bbox[0]
+                    
+                    # Center each line horizontally
+                    text_x = inner_cell_x0 + (inner_cell_width - line_width) // 2
+                    text_y = start_y + line_idx * (line_height + line_spacing)
+                    
+                    draw.text((text_x, text_y), line, font=best_font, fill=(255, 255, 255))
     
     return image
 
