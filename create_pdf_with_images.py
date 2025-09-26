@@ -32,7 +32,11 @@ def create_image_with_text(template_path, cell_texts_list, font_path="arial.ttf"
     
     # Load font
     font_size = 48
-    font = ImageFont.truetype(font_path, font_size)
+    try:
+        font = ImageFont.truetype(font_path, font_size)
+    except:
+        # Fallback to default font if truetype font fails
+        font = ImageFont.load_default()
     
     # Draw grid and text for each main cell
     for main_cell_idx in range(cols * rows):
@@ -88,21 +92,36 @@ def create_image_with_text(template_path, cell_texts_list, font_path="arial.ttf"
             inner_cell_x1 = inner_cell_x0 + inner_cell_width
             inner_cell_y1 = inner_cell_y0 + inner_cell_height
             
-            # Find the largest font size that fits
+            # Find the largest font size that fits - with safety limits
             max_font_size = 10
-            max_possible_size = min(inner_cell_width, inner_cell_height) // 2
-            for size in range(10, max_possible_size, 2):
-                test_font = ImageFont.truetype(font_path, size)
-                bbox = test_font.getbbox(inner_text)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-                if text_width < inner_cell_width * 0.8 and text_height < inner_cell_height * 0.8:
-                    max_font_size = size
-                else:
+            max_possible_size = min(inner_cell_width, inner_cell_height) // 3  # More conservative limit
+            max_possible_size = min(max_possible_size, 40)  # Hard limit at 40px
+            
+            # Start with a reasonable size and work our way up
+            for size in range(10, max_possible_size + 1, 1):
+                try:
+                    test_font = ImageFont.truetype(font_path, size)
+                except:
+                    test_font = ImageFont.load_default()
+                
+                try:
+                    bbox = test_font.getbbox(inner_text)
+                    text_width = bbox[2] - bbox[0]
+                    text_height = bbox[3] - bbox[1]
+                    
+                    if text_width < inner_cell_width * 0.9 and text_height < inner_cell_height * 0.9:
+                        max_font_size = size
+                    else:
+                        break
+                except:
+                    # If getbbox fails, stick with current size
                     break
             
-            # Draw the text
-            final_font = ImageFont.truetype(font_path, max_font_size)
+            # Draw the text with proper font fallback
+            try:
+                final_font = ImageFont.truetype(font_path, max_font_size)
+            except:
+                final_font = ImageFont.load_default()
             bbox = final_font.getbbox(inner_text)
             text_width = bbox[2] - bbox[0]
             text_height = bbox[3] - bbox[1]
@@ -129,6 +148,7 @@ def create_pdf_with_images(template_path, text_variations, output_pdf_path, page
     page_width, page_height = page_size
     
     for i, cell_texts_list in enumerate(text_variations):
+        print(f"Processing page {i+1}/{len(text_variations)}...")
         # Create image with current text variation
         image = create_image_with_text(template_path, cell_texts_list)
         
@@ -163,7 +183,7 @@ def create_pdf_with_images(template_path, text_variations, output_pdf_path, page
         
         # Add page title in bottom right corner to avoid interfering with the image
         c.setFont("Helvetica-Bold", 12)
-        title_text = f"Card {i + 1}"
+        title_text = f"Page {i + 1}"
         title_width = c.stringWidth(title_text, "Helvetica-Bold", 12)
         c.drawString(page_width - title_width - 10, 10, title_text)
         
@@ -177,47 +197,198 @@ def create_pdf_with_images(template_path, text_variations, output_pdf_path, page
 # Example usage
 if __name__ == "__main__":
     template_path = "template.jpg"
-    
-    # Define different text variations for your bingo cards
-    # Each variation contains 8 lists (one for each main cell)
-    # Each inner list contains 6 text items (for the 2x3 inner grid)
-    text_variations = [
-        # Bingo Card 1 - Musical Genres
-        [
-            ["Rock", "Pop", "Jazz", "Blues", "Folk", "Punk"],      # Main cell 1
-            ["Hip-Hop", "R&B", "Soul", "Funk", "Disco", "House"], # Main cell 2
-            ["Metal", "Death", "Black", "Power", "Prog", "Doom"], # Main cell 3
-            ["Country", "Western", "Bluegrass", "Honky", "Alt", "New"], # Main cell 4
-            ["Electronic", "Techno", "Trance", "Dubstep", "Ambient", "IDM"], # Main cell 5
-            ["Classical", "Baroque", "Romantic", "Modern", "Opera", "Chamber"], # Main cell 6
-            ["World", "Latin", "African", "Asian", "Celtic", "Reggae"], # Main cell 7
-            ["Alternative", "Indie", "Grunge", "Post-Rock", "Shoegaze", "Emo"] # Main cell 8
-        ],
-        
-        # Bingo Card 2 - Musical Instruments
-        [
-            ["Guitar", "Bass", "Violin", "Cello", "Piano", "Organ"],
-            ["Drums", "Cymbals", "Snare", "Kick", "Hi-Hat", "Tom"],
-            ["Trumpet", "Trombone", "French Horn", "Tuba", "Cornet", "Flugelhorn"],
-            ["Flute", "Clarinet", "Oboe", "Bassoon", "Piccolo", "Recorder"],
-            ["Saxophone", "Alto", "Tenor", "Soprano", "Baritone", "Bass"],
-            ["Harmonica", "Accordion", "Banjo", "Mandolin", "Ukulele", "Harp"],
-            ["Synthesizer", "Keyboard", "Sampler", "Sequencer", "Drum Machine", "MIDI"],
-            ["Vocals", "Soprano", "Alto", "Tenor", "Bass", "Falsetto"]
-        ],
-        
-        # Bingo Card 3 - Famous Musicians
-        [
-            ["Beatles", "John", "Paul", "George", "Ringo", "Liverpool"],
-            ["Elvis", "Presley", "King", "Rock", "Roll", "Memphis"],
-            ["Mozart", "Wolfgang", "Amadeus", "Classical", "Composer", "Austria"],
-            ["Miles", "Davis", "Jazz", "Trumpet", "Cool", "Bebop"],
-            ["Bob", "Dylan", "Folk", "Nobel", "Harmonica", "Minnesota"],
-            ["Madonna", "Pop", "Queen", "Material", "Girl", "Detroit"],
-            ["Hendrix", "Jimi", "Guitar", "Purple", "Haze", "Seattle"],
-            ["Beethoven", "Ludwig", "Symphony", "Deaf", "German", "Classical"]
-        ]
+
+    canciones = [
+        "La Cucaracha",
+        "La Mayonesa",
+        "El anillo",
+        "Despacito",
+        "Gasolina",
+        "Danza Kuduro",
+        "Bailando",
+        "Súbeme la radio",
+        "Felices los 4",
+        "Hawái",
+        "Paquito el Chocolatero",
+        "Que viva España",
+        "Eva María",
+        "Un rayo de sol",
+        "La chica yeyé",
+        "Sarandonga",
+        "El tractor amarillo",
+        "Libre",
+        "Corazón partío",
+        "Colgando en tus manos",
+        "El tiburón",
+        "Carnaval, carnaval",
+        "La barbacoa",
+        "Cuentan las lenguas antiguas",
+        "Macarena",
+        "Aserejé",
+        "Waka Waka",
+        "Hips don’t lie",
+        "Oma yo viazé un corrá",
+        "Livin’ la vida loca",
+        "Ese toro enamorao de la luna",
+        "En qué estrella estará",
+        "Yo perreo sola",
+        "La gasolina",
+        "Tengo el corazón contento",
+        "Cuando zarpa el amor",
+        "Sueño contigo, que más dado",
+        "La bicicleta",
+        "Robarte un beso",
+        "Qué bonito",
+        "Como yo te amo",
+        "Pájaros de barro",
+        "La flaca",
+        "Lobo hombre en París",
+        "Chiquilla",
+        "La Cucaracha",
+        "La Mayonesa",
+        "El anillo",
+        "Despacito",
+        "Gasolina",
+        "Danza Kuduro",
+        "Bailando",
+        "Súbeme la radio",
+        "Felices los 4",
+        "Hawái",
+        "Paquito el Chocolatero",
+        "Que viva España",
+        "Eva María",
+        "Un rayo de sol",
+        "La chica yeyé",
+        "Sarandonga",
+        "El tractor amarillo",
+        "Libre",
+        "Corazón partío",
+        "Colgando en tus manos",
+        "El tiburón",
+        "Carnaval, carnaval",
+        "La barbacoa",
+        "Cuentan las lenguas antiguas",
+        "Macarena",
+        "Aserejé",
+        "Waka Waka",
+        "Hips don’t lie",
+        "Oma yo viazé un corrá",
+        "Livin’ la vida loca",
+        "Ese toro enamorao de la luna",
+        "En qué estrella estará",
+        "Yo perreo sola",
+        "La gasolina",
+        "Tengo el corazón contento",
+        "Cuando zarpa el amor",
+        "Sueño contigo, que más dado",
+        "La bicicleta",
+        "Robarte un beso",
+        "Qué bonito",
+        "Como yo te amo",
+        "Pájaros de barro",
+        "La flaca",
+        "Lobo hombre en París",
+        "Chiquilla",
+        "La Cucaracha",
+        "La Mayonesa",
+        "El anillo",
+        "Despacito",
+        "Gasolina",
+        "Danza Kuduro",
+        "Bailando",
+        "Súbeme la radio",
+        "Felices los 4",
+        "Hawái",
+        "Paquito el Chocolatero",
+        "Que viva España",
+        "Eva María",
+        "Un rayo de sol",
+        "La chica yeyé",
+        "Sarandonga",
+        "El tractor amarillo",
+        "Libre",
+        "Corazón partío",
+        "Colgando en tus manos",
+        "El tiburón",
+        "Carnaval, carnaval",
+        "La barbacoa",
+        "Cuentan las lenguas antiguas",
+        "Macarena",
+        "Aserejé",
+        "Waka Waka",
+        "Hips don’t lie",
+        "Oma yo viazé un corrá",
+        "Livin’ la vida loca",
+        "Ese toro enamorao de la luna",
+        "En qué estrella estará",
+        "Yo perreo sola",
+        "La gasolina",
+        "Tengo el corazón contento",
+        "Cuando zarpa el amor",
+        "Sueño contigo, que más dado",
+        "La bicicleta",
+        "Robarte un beso",
+        "Qué bonito",
+        "Como yo te amo",
+        "Pájaros de barro",
+        "La flaca",
+        "Lobo hombre en París",
+        "Chiquilla",
     ]
+
+    canciones_ganadoras = [
+        "Baby shark",
+        "Tengo que impedir esa boda",
+        "BSO El padrino",
+        "Ay mama!",
+        "El taxi",
+        "La de tu hermana"
+    ]
+
+    num_sheets = 15
+
+    # Generate text variations for bingo cards
+    import random
+    text_variations = []
+    
+    # Generate pages of bingo cards
+    for page_num in range(1, num_sheets + 1):
+        # Each page contains 8 bingo cards (8 main cells, each with 6 songs)
+        page_cards = []
+        
+        if page_num == 1:
+            # First page: ensure one card contains ALL canciones_ganadoras (winning card)
+            print(f"Generating Page {page_num} with WINNING CARD...")
+            
+            # First card on the page is the winning card
+            winning_card_songs = canciones_ganadoras.copy()
+            page_cards.append(winning_card_songs)
+            
+            # Generate 7 more cards for this page with random songs
+            for card_idx in range(7):
+                all_available = canciones + canciones_ganadoras
+                card_songs = random.choices(all_available, k=6)
+                page_cards.append(card_songs)
+            
+            print(f"Page {page_num}: Card 1 (WINNING) contains all canciones_ganadoras: {canciones_ganadoras}")
+            
+        else:
+            # Other pages: generate 8 random cards
+            print(f"Generating Page {page_num}...")
+            
+            for card_idx in range(8):
+                all_available = canciones + canciones_ganadoras
+                card_songs = random.choices(all_available, k=6)
+                page_cards.append(card_songs)
+        
+        # Add this page to text_variations
+        text_variations.append(page_cards)
+        
+        # Check which canciones_ganadoras are in each card of this page
+        for card_idx, card_songs in enumerate(page_cards):
+            ganadoras_in_card = [song for song in canciones_ganadoras if song in card_songs]
+            if ganadoras_in_card:
+                print(f"Page {page_num}, Card {card_idx + 1} contains {len(ganadoras_in_card)} canciones_ganadoras: {ganadoras_in_card}")
     
     # Create the PDF
     output_pdf = "musical_bingo_cards.pdf"
