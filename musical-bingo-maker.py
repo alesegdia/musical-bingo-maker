@@ -430,7 +430,7 @@ if __name__ == "__main__":
         "El padrino",
         "Ay mama!",
         "El taxi",
-        "Llevarme a mi Extremadura"
+        "Nos fuimos pa Madrid"
     ]
 
     num_sheets = 15
