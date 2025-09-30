@@ -1,0 +1,6 @@
+# Musical Bingo Maker - Python Dependencies
+# Image processing and manipulation
+Pillow==11.3.0
+
+# PDF generation
+reportlab==4.4.4

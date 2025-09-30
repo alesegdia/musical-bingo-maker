@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "musical-bingo-maker"
+version = "1.0.0"
+description = "A Python application that creates customizable musical bingo cards with text overlays and generates PDF output"
+authors = [
+    {name = "alesegdia", email = ""}
+]
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.7"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "Pillow>=10.0.0",
+    "reportlab>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/alesegdia/musical-bingo-maker"
+Repository = "https://github.com/alesegdia/musical-bingo-maker.git"
+Issues = "https://github.com/alesegdia/musical-bingo-maker/issues"
+
+[project.scripts]
+musical-bingo-maker = "musical-bingo-maker:main"
+
+[tool.setuptools]
+py-modules = ["musical-bingo-maker"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black>=22.0",
+    "flake8>=4.0",
+]
